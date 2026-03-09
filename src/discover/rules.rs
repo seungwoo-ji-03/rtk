@@ -38,11 +38,14 @@ pub const PATTERNS: &[&str] = &[
     r"^diff\s+",
     r"^curl\s+",
     r"^wget\s+",
+    // Python3 interpreter (generic: -m py_compile, scripts, -c)
+    // Must come BEFORE specific python module patterns so .last() picks specific over generic
+    r"^python3?(\s|$)",
     r"^(python3?\s+-m\s+)?mypy(\s|$)",
     // Python tooling
-    r"^ruff\s+(check|format)",
-    r"^(python\s+-m\s+)?pytest(\s|$)",
-    r"^(pip3?|uv\s+pip)\s+(list|outdated|install)",
+    r"^(python3?\s+-m\s+)?ruff\s+(check|format)",
+    r"^(python3?\s+-m\s+)?pytest(\s|$)",
+    r"^(pip3?|uv\s+pip|python3?\s+-m\s+pip)\s+(list|outdated|install)",
     // Go tooling
     r"^go\s+(test|build|vet)",
     r"^golangci-lint(\s|$)",
@@ -290,6 +293,15 @@ pub const RULES: &[RtkRule] = &[
         subcmd_savings: &[],
         subcmd_status: &[],
     },
+    // Python3 interpreter (generic, must come before specific python module rules)
+    RtkRule {
+        rtk_cmd: "rtk python3",
+        rewrite_prefixes: &["python3", "python"],
+        category: "Python",
+        savings_pct: 60.0,
+        subcmd_savings: &[],
+        subcmd_status: &[],
+    },
     RtkRule {
         rtk_cmd: "rtk mypy",
         rewrite_prefixes: &["python3 -m mypy", "python -m mypy", "mypy"],
@@ -301,7 +313,7 @@ pub const RULES: &[RtkRule] = &[
     // Python tooling
     RtkRule {
         rtk_cmd: "rtk ruff",
-        rewrite_prefixes: &["ruff"],
+        rewrite_prefixes: &["python3 -m ruff", "python -m ruff", "ruff"],
         category: "Python",
         savings_pct: 80.0,
         subcmd_savings: &[("check", 80.0), ("format", 75.0)],
@@ -309,7 +321,7 @@ pub const RULES: &[RtkRule] = &[
     },
     RtkRule {
         rtk_cmd: "rtk pytest",
-        rewrite_prefixes: &["python -m pytest", "pytest"],
+        rewrite_prefixes: &["python3 -m pytest", "python -m pytest", "pytest"],
         category: "Python",
         savings_pct: 90.0,
         subcmd_savings: &[],
@@ -317,7 +329,7 @@ pub const RULES: &[RtkRule] = &[
     },
     RtkRule {
         rtk_cmd: "rtk pip",
-        rewrite_prefixes: &["pip3", "pip", "uv pip"],
+        rewrite_prefixes: &["python3 -m pip", "python -m pip", "pip3", "pip", "uv pip"],
         category: "Python",
         savings_pct: 75.0,
         subcmd_savings: &[("list", 75.0), ("outdated", 80.0)],
@@ -696,8 +708,7 @@ pub const IGNORED_PREFIXES: &[&str] = &[
     "cut ",
     "awk ",
     "sed ",
-    "python3 -c",
-    "python -c",
+    // python3 -c and python -c are now handled by rtk python3
     "node -e",
     "ruby -e",
     "rtk ",

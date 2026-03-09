@@ -15,7 +15,7 @@ use cmds::js::{
     lint_cmd, next_cmd, npm_cmd, playwright_cmd, pnpm_cmd, prettier_cmd, prisma_cmd, tsc_cmd,
     vitest_cmd,
 };
-use cmds::python::{mypy_cmd, pip_cmd, pytest_cmd, ruff_cmd};
+use cmds::python::{mypy_cmd, pip_cmd, pytest_cmd, python3_cmd, ruff_cmd};
 use cmds::ruby::{rake_cmd, rspec_cmd, rubocop_cmd};
 use cmds::rust::{cargo_cmd, runner};
 use cmds::system::{
@@ -631,6 +631,20 @@ enum Commands {
     /// Pip package manager with compact output (auto-detects uv)
     Pip {
         /// Pip arguments (e.g., list, outdated, install)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// Python3 interpreter with module routing and traceback filtering
+    Python3 {
+        /// Python3 arguments (e.g., -m pytest, -m pip list, script.py)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// Python interpreter (alias for python3)
+    Python {
+        /// Python arguments
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -2005,6 +2019,10 @@ fn main() -> Result<()> {
 
         Commands::Pip { args } => {
             pip_cmd::run(&args, cli.verbose)?;
+        }
+
+        Commands::Python3 { args } | Commands::Python { args } => {
+            python3_cmd::run(&args, cli.verbose)?;
         }
 
         Commands::Go { command } => match command {
