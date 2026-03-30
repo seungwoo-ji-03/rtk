@@ -1,3 +1,4 @@
+use super::{mypy_cmd, pip_cmd, pytest_cmd, ruff_cmd};
 use crate::core::tracking;
 use crate::core::utils::{strip_ansi, tool_exists};
 use anyhow::{Context, Result};
@@ -7,10 +8,10 @@ use std::sync::OnceLock;
 pub fn run(args: &[String], verbose: u8) -> Result<()> {
     if args.len() >= 2 && args[0] == "-m" {
         match args[1].as_str() {
-            "pytest" => crate::cmds::python::pytest_cmd::run(&args[2..], verbose),
-            "mypy" => crate::cmds::python::mypy_cmd::run(&args[2..], verbose),
-            "ruff" => crate::cmds::python::ruff_cmd::run(&args[2..], verbose),
-            "pip" => crate::cmds::python::pip_cmd::run(&args[2..], verbose),
+            "pytest" => pytest_cmd::run(&args[2..], verbose),
+            "mypy" => mypy_cmd::run(&args[2..], verbose),
+            "ruff" => ruff_cmd::run(&args[2..], verbose),
+            "pip" => pip_cmd::run(&args[2..], verbose),
             "py_compile" => run_py_compile(&args[2..], verbose),
             _ => run_generic(args, verbose),
         }
@@ -37,10 +38,7 @@ fn run_py_compile(args: &[String], verbose: u8) -> Result<()> {
     let bin = python_bin();
 
     let mut cmd = Command::new(bin);
-    cmd.arg("-m").arg("py_compile");
-    for arg in args {
-        cmd.arg(arg);
-    }
+    cmd.arg("-m").arg("py_compile").args(args);
 
     if verbose > 0 {
         eprintln!("Running: {} -m py_compile {}", bin, args.join(" "));
@@ -91,9 +89,7 @@ fn run_generic(args: &[String], verbose: u8) -> Result<()> {
     let bin = python_bin();
 
     let mut cmd = Command::new(bin);
-    for arg in args {
-        cmd.arg(arg);
-    }
+    cmd.args(args);
 
     if verbose > 0 {
         eprintln!("Running: {} {}", bin, args.join(" "));
