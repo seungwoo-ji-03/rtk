@@ -5,23 +5,18 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 pub fn run(args: &[String], verbose: u8) -> Result<()> {
-    // Detect -m <module> pattern and delegate to specialized handlers
     if args.len() >= 2 && args[0] == "-m" {
-        let module = args[1].as_str();
-        let rest: Vec<String> = args[2..].to_vec();
-
-        match module {
-            "pytest" => return crate::cmds::python::pytest_cmd::run(&rest, verbose),
-            "mypy" => return crate::cmds::python::mypy_cmd::run(&rest, verbose),
-            "ruff" => return crate::cmds::python::ruff_cmd::run(&rest, verbose),
-            "pip" => return crate::cmds::python::pip_cmd::run(&rest, verbose),
-            "py_compile" => return run_py_compile(&rest, verbose),
-            _ => {} // Fall through to generic execution
+        match args[1].as_str() {
+            "pytest" => crate::cmds::python::pytest_cmd::run(&args[2..], verbose),
+            "mypy" => crate::cmds::python::mypy_cmd::run(&args[2..], verbose),
+            "ruff" => crate::cmds::python::ruff_cmd::run(&args[2..], verbose),
+            "pip" => crate::cmds::python::pip_cmd::run(&args[2..], verbose),
+            "py_compile" => run_py_compile(&args[2..], verbose),
+            _ => run_generic(args, verbose),
         }
+    } else {
+        run_generic(args, verbose)
     }
-
-    // Generic python3 execution with traceback filtering
-    run_generic(args, verbose)
 }
 
 /// Resolve the python interpreter binary: prefer python3, fallback to python.
