@@ -1,7 +1,8 @@
 use crate::core::tracking;
-use crate::core::utils::strip_ansi;
+use crate::core::utils::{strip_ansi, tool_exists};
 use anyhow::{Context, Result};
 use std::process::Command;
+use std::sync::OnceLock;
 
 pub fn run(args: &[String], verbose: u8) -> Result<()> {
     // Detect -m <module> pattern and delegate to specialized handlers
@@ -25,23 +26,14 @@ pub fn run(args: &[String], verbose: u8) -> Result<()> {
 
 /// Resolve the python interpreter binary: prefer python3, fallback to python.
 fn python_bin() -> &'static str {
-    if which_command("python3").is_some() {
-        "python3"
-    } else {
-        "python"
-    }
-}
-
-/// Check if a command exists in PATH
-fn which_command(cmd: &str) -> Option<String> {
-    Command::new("which")
-        .arg(cmd)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+    static BIN: OnceLock<&str> = OnceLock::new();
+    BIN.get_or_init(|| {
+        if tool_exists("python3") {
+            "python3"
+        } else {
+            "python"
+        }
+    })
 }
 
 /// Run `python3 -m py_compile <file>` and filter output.
@@ -65,7 +57,7 @@ fn run_py_compile(args: &[String], verbose: u8) -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let raw = format!("{}{}", stdout, stderr);
+    let raw = format!("{}\n{}", stdout, stderr);
     let exit_code = output.status.code().unwrap_or(1);
 
     let filtered = if output.status.success() {
@@ -118,12 +110,12 @@ fn run_generic(args: &[String], verbose: u8) -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let raw = format!("{}{}", stdout, stderr);
+    let raw = format!("{}\n{}", stdout, stderr);
     let exit_code = output.status.code().unwrap_or(1);
 
     let filtered = if output.status.success() {
-        // For successful runs, pass through stdout (it's usually short script output)
-        stdout.trim().to_string()
+        // For successful runs, pass through stdout + stderr (warnings, deprecations)
+        raw.trim().to_string()
     } else {
         // For failures, filter tracebacks to show only the error summary
         filter_traceback(&raw)
@@ -167,8 +159,6 @@ fn filter_compile_errors(raw: &str) -> String {
         if trimmed.starts_with("File ")
             || trimmed.contains("Error:")
             || trimmed.contains("Warning:")
-            || trimmed.starts_with(">>>")
-            || trimmed.starts_with("...")
             || is_caret_pointer(trimmed)
         {
             errors.push(trimmed);

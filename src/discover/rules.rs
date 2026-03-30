@@ -708,7 +708,6 @@ pub const IGNORED_PREFIXES: &[&str] = &[
     "cut ",
     "awk ",
     "sed ",
-    // python3 -c and python -c are now handled by rtk python3
     "node -e",
     "ruby -e",
     "rtk ",
