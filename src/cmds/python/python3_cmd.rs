@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use std::process::Command;
 use std::sync::OnceLock;
 
-pub fn run(args: &[String], verbose: u8) -> Result<()> {
+pub fn run(args: &[String], verbose: u8) -> Result<i32> {
     if args.len() >= 2 && args[0] == "-m" {
         match args[1].as_str() {
             "pytest" => pytest_cmd::run(&args[2..], verbose),
@@ -33,7 +33,7 @@ fn python_bin() -> &'static str {
 }
 
 /// Run `python3 -m py_compile <file>` and filter output.
-fn run_py_compile(args: &[String], verbose: u8) -> Result<()> {
+fn run_py_compile(args: &[String], verbose: u8) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
     let bin = python_bin();
 
@@ -76,15 +76,11 @@ fn run_py_compile(args: &[String], verbose: u8) -> Result<()> {
         &filtered,
     );
 
-    if !output.status.success() {
-        std::process::exit(exit_code);
-    }
-
-    Ok(())
+    Ok(exit_code)
 }
 
 /// Run python3 generically with traceback filtering.
-fn run_generic(args: &[String], verbose: u8) -> Result<()> {
+fn run_generic(args: &[String], verbose: u8) -> Result<i32> {
     let timer = tracking::TimedExecution::start();
     let bin = python_bin();
 
@@ -129,11 +125,7 @@ fn run_generic(args: &[String], verbose: u8) -> Result<()> {
         &filtered,
     );
 
-    if !output.status.success() {
-        std::process::exit(exit_code);
-    }
-
-    Ok(())
+    Ok(exit_code)
 }
 
 /// Filter py_compile errors to show only the error lines.
